@@ -1,0 +1,6 @@
+join-message: "&aWelcome back, &e&l%player%&c! &aGood to see you again."
+feed-player: true #feed them on join
+foods:
+  - 'Pizza'
+  - 'Grape'
+  - 'Orange'

@@ -1,0 +1,8 @@
+name: CustomMobs
+version: '1.0'
+main: me.akchai.customMobs.CustomMobs
+api-version: '1.21'
+depend: [FirstPlugin]
+commands:
+  custommobs:
+    usage: /<command>
