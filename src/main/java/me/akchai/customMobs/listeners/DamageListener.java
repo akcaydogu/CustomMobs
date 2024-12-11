@@ -69,6 +69,7 @@ public class DamageListener implements Listener {
 
             // Set the damage directly, bypassing Minecraft's armor calculations
             event.setDamage(EntityDamageByEntityEvent.DamageModifier.BASE, damage);
+            
 
             // Remove armor reduction by setting the armor modifier to 0
             if (event.isApplicable(EntityDamageByEntityEvent.DamageModifier.ARMOR)) {
@@ -98,9 +99,12 @@ public class DamageListener implements Listener {
 
 
         String formattedHealth = String.format("%.1f", health);  // 1 decimal place for health
+        String str = entity.getCustomName();
+        int lastSpaceIndex = str.lastIndexOf(" ");
+        String firstPart = str.substring(0, lastSpaceIndex);
+        String secondPart = str.substring(lastSpaceIndex + 1);
 
-
-        entity.setCustomName(ChatColor.translateAlternateColorCodes('&', entity.getCustomName().split(" ")[0] + " &d" + formattedHealth + "/" + maxHealth));
+        entity.setCustomName(ChatColor.translateAlternateColorCodes('&', firstPart + " &d" + formattedHealth + "/" + maxHealth));
     }
 
 }

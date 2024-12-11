@@ -6,3 +6,5 @@ depend: [FirstPlugin]
 commands:
   custommobs:
     usage: /<command>
+  level:
+    usage: /<command>
