@@ -9,6 +9,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.persistence.PersistentDataType;
 
 import static me.akchai.customMobs.CustomMobs.prefix;
@@ -37,6 +38,15 @@ public class LevelCommand implements CommandExecutor {
                     case "add":
                         addCommand(p, args);
                         return true;
+                    case "remove":
+                        removeCommand(p, args);
+                        return true;
+                    case "reload":
+                        LevelConfig.reloadConfig();
+                        return true;
+                    case "list":
+                        showLevelList(p);
+                        return true;
                 }
             } else {
                 p.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + "&cYou don't have permission to use this command!"));
@@ -46,7 +56,132 @@ public class LevelCommand implements CommandExecutor {
         return true;
     }
 
-    public void addCommand(Player p, String[] args) {
+    //Check remove functions
+    private void removeCommand(Player p, String[] args) {
+        if (args.length == 3 || args.length == 4) {
+            switch (args[1]) {
+                case "level":
+                    removeLevel(p, args);
+                    break;
+                case "xp":
+                    removeXP(p, args);
+                    break;
+            }
+        }
+    }
+
+    private void removeLevel(Player p, String[] args) {
+        try {
+            int minusLevel = Integer.parseInt(args[2]);
+            if (minusLevel <= 0) {
+                p.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + "&cLevel must be greater than 0!"));
+                return;
+            }
+            if (args.length == 4) {
+                Player target = Bukkit.getPlayerExact(args[3]);
+                if (target != null) {
+                    int level = target.getPersistentDataContainer().get(levelKey, PersistentDataType.INTEGER);
+                    if (level-minusLevel < 0) {
+                        p.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + "&cYou can not set player's level below zero!"));
+                        return;
+                    }
+                    level -= minusLevel;
+                    target.getPersistentDataContainer().set(levelKey, PersistentDataType.INTEGER, level);
+                    target.getPersistentDataContainer().set(xpKey, PersistentDataType.INTEGER, 0);
+                    int nextForLevel = LevelConfig.getConfig().getInt("level." + level);
+                    target.getPersistentDataContainer().set(xpForNextKey, PersistentDataType.INTEGER, nextForLevel);
+
+                    target.setLevel(level);
+                    target.setExp(setProgress(0, nextForLevel));
+
+                    p.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + minusLevel + "&aLevel removed from " + target.getDisplayName() + "!"));
+                } else {
+                    p.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + "&cThat player is not online!"));
+                }
+            } else if (args.length == 3) {
+                int level = p.getPersistentDataContainer().get(levelKey, PersistentDataType.INTEGER);
+                if (level-minusLevel < 0) {
+                    p.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + "&cYou can not set player's level below zero!"));
+                    return;
+                }
+
+                level -= minusLevel;
+                p.getPersistentDataContainer().set(levelKey, PersistentDataType.INTEGER, level);
+                int nextForLevel = LevelConfig.getConfig().getInt("level." + level);
+
+                p.getPersistentDataContainer().set(xpKey, PersistentDataType.INTEGER, 0);
+                p.getPersistentDataContainer().set(xpForNextKey, PersistentDataType.INTEGER, nextForLevel);
+
+                p.setLevel(level);
+                p.setExp(setProgress(0, nextForLevel));
+
+                p.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + minusLevel + "&aLevel removed from " + p.getDisplayName() + "!"));
+            }
+
+        } catch (NumberFormatException e) {
+            p.sendMessage(ChatColor.RED + "Invalid number!");
+        }
+    }
+
+    private void removeXP(Player p, String[] args) {
+        try {
+            int minusXP= Integer.parseInt(args[2]);
+
+            if (args.length == 4) {
+                Player target = Bukkit.getPlayerExact(args[3]);
+                if (target != null) {
+                    int level = target.getPersistentDataContainer().get(levelKey, PersistentDataType.INTEGER);
+                    int xp = target.getPersistentDataContainer().get(xpKey, PersistentDataType.INTEGER);
+
+                    int xpForNext = target.getPersistentDataContainer().get(xpForNextKey, PersistentDataType.INTEGER);
+
+                    if (minusXP <= xp) {
+                        xp -= minusXP;
+                    }
+
+                    while(minusXP > xp) {
+                        level--;
+                        xpForNext = LevelConfig.getConfig().getInt("level." + level);
+                        xp += xpForNext;
+                        xp -= minusXP;
+                    }
+
+                    target.getPersistentDataContainer().set(xpKey, PersistentDataType.INTEGER, xp);
+                    target.getPersistentDataContainer().set(levelKey, PersistentDataType.INTEGER, level);
+                    target.setLevel(level);
+                    target.setExp(setProgress(xp, xpForNext));
+                } else {
+                    p.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + "&cThat player is not online!"));
+                }
+            } else if (args.length == 3) {
+                int level = p.getPersistentDataContainer().get(levelKey, PersistentDataType.INTEGER);
+                int xp = p.getPersistentDataContainer().get(xpKey, PersistentDataType.INTEGER);
+
+                int xpForNext = p.getPersistentDataContainer().get(xpForNextKey, PersistentDataType.INTEGER);
+
+                if (minusXP <= xp) {
+                    xp -= minusXP;
+                }
+
+                while(minusXP > xp) {
+                    level--;
+                    xpForNext = LevelConfig.getConfig().getInt("level." + level);
+                    xp += xpForNext;
+                    xp -= minusXP;
+                }
+
+                p.getPersistentDataContainer().set(xpKey, PersistentDataType.INTEGER, xp);
+                p.getPersistentDataContainer().set(levelKey, PersistentDataType.INTEGER, level);
+                p.setLevel(level);
+                p.setExp(setProgress(xp, xpForNext));
+            }
+
+        } catch (NumberFormatException e) {
+            p.sendMessage(ChatColor.RED + "Invalid number!");
+        }
+    }
+
+    private void addCommand(Player p, String[] args) {
         if (args.length == 3 || args.length == 4) {
             switch (args[1]) {
                 case "level":
@@ -82,7 +217,7 @@ public class LevelCommand implements CommandExecutor {
 
                 int xp = target.getPersistentDataContainer().get(xpKey, PersistentDataType.INTEGER);
 
-                target.setExp(setProgress(p, xp, xpForNextV));
+                target.setExp(setProgress(xp, xpForNextV));
                 target.setLevel(level);
 
                 target.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + addLevel + "&aLevel added to " + target.getDisplayName() + " new level : " + level + "!"));
@@ -96,7 +231,7 @@ public class LevelCommand implements CommandExecutor {
 
                 int xp = p.getPersistentDataContainer().get(xpKey, PersistentDataType.INTEGER);
 
-                p.setExp(setProgress(p, xp, xpForNextV));
+                p.setExp(setProgress(xp, xpForNextV));
                 p.setLevel(level);
 
                 p.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + addLevel + "&aLevel added new level : " + level + "!"));
@@ -134,7 +269,7 @@ public class LevelCommand implements CommandExecutor {
                 target.getPersistentDataContainer().set(levelKey, PersistentDataType.INTEGER, level);
 
                 target.setLevel(level);
-                target.setExp(setProgress(p, xp, xpForNext));
+                target.setExp(setProgress(xp, xpForNext));
 
                 target.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix +" &d"+ addXp + "&aXP added to " + target.getDisplayName() + " new level : " + level + "!"));
             } else {
@@ -156,7 +291,7 @@ public class LevelCommand implements CommandExecutor {
                 p.getPersistentDataContainer().set(levelKey, PersistentDataType.INTEGER, level);
 
                 p.setLevel(level);
-                p.setExp(setProgress(p, xp, xpForNext));
+                p.setExp(setProgress(xp, xpForNext));
             }
 
 
@@ -166,7 +301,7 @@ public class LevelCommand implements CommandExecutor {
         }
     }
 
-    public void setCommand(Player p, String[] args) {
+    private void setCommand(Player p, String[] args) {
         if (args.length == 3 || args.length == 4) {
             switch (args[1]) {
                 case "xp":
@@ -194,7 +329,7 @@ public class LevelCommand implements CommandExecutor {
                 int newXp = Integer.parseInt(args[2]);
                 if (xpForNext > newXp) {
                     target.getPersistentDataContainer().set(xpKey, PersistentDataType.INTEGER, newXp);
-                    target.setExp(setProgress(p, newXp, xpForNext));
+                    target.setExp(setProgress(newXp, xpForNext));
                     target.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + "&aXP of " + target.getDisplayName() + " set to &d" + newXp));
                 } else {
                     target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cYou cant set xp more than xp for next level!"));
@@ -204,7 +339,7 @@ public class LevelCommand implements CommandExecutor {
                 int newXp = Integer.parseInt(args[2]);
                 if (xpForNext > newXp) {
                     p.getPersistentDataContainer().set(xpKey, PersistentDataType.INTEGER, newXp);
-                    p.setExp(setProgress(p, newXp, xpForNext));
+                    p.setExp(setProgress(newXp, xpForNext));
                     p.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + "&aXP set to &d" + newXp));
                 } else {
                     p.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cYou cant set xp more than xp for next level!"));
@@ -217,6 +352,7 @@ public class LevelCommand implements CommandExecutor {
             p.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + "&cYou have entered an invalid number!"));
         }
     }
+
     private void setLevel(Player p, String[] args) {
         try {
 
@@ -232,7 +368,7 @@ public class LevelCommand implements CommandExecutor {
                 target.getPersistentDataContainer().set(new NamespacedKey(CustomMobs.getPlugin(), "level"), PersistentDataType.INTEGER, level);
                 target.getPersistentDataContainer().set(new NamespacedKey(CustomMobs.getPlugin(), "xp"), PersistentDataType.INTEGER, 0);
                 int xp = p.getPersistentDataContainer().get(new NamespacedKey(CustomMobs.getPlugin(), "xp"), PersistentDataType.INTEGER);
-                target.setExp(setProgress(p, xp, xpForNext));
+                target.setExp(setProgress(xp, xpForNext));
                 target.setLevel(level);
                 target.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + "&aLevel of " + target.getDisplayName() + " set to &d" + level + "!"));
             } else {
@@ -242,7 +378,7 @@ public class LevelCommand implements CommandExecutor {
                 p.getPersistentDataContainer().set(new NamespacedKey(CustomMobs.getPlugin(), "level"), PersistentDataType.INTEGER, level);
                 p.getPersistentDataContainer().set(new NamespacedKey(CustomMobs.getPlugin(), "xp"), PersistentDataType.INTEGER, 0);
                 int xp = p.getPersistentDataContainer().get(new NamespacedKey(CustomMobs.getPlugin(), "xp"), PersistentDataType.INTEGER);
-                p.setExp(setProgress(p, xp, xpForNext));
+                p.setExp(setProgress(xp, xpForNext));
                 p.setLevel(level);
                 p.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + "&aLevel set to &d" + level + "!"));
             }
@@ -251,7 +387,7 @@ public class LevelCommand implements CommandExecutor {
         }
     }
 
-    private float setProgress(Player p, int xp, int xpForNext){
+    private float setProgress(int xp, int xpForNext){
 
         float progress = (float) xp / xpForNext;
         progress = Math.min(1.0f, Math.max(0.0f, progress));
@@ -267,4 +403,13 @@ public class LevelCommand implements CommandExecutor {
         p.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + "&cLevel : " + level));
         p.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + "&aXP : " + xp + "/" + xpForNext));
     }
+
+    private void showLevelList(Player p) {
+
+        for (String x : LevelConfig.getConfig().getConfigurationSection("level").getKeys(false)){
+            p.sendMessage(ChatColor.translateAlternateColorCodes('&', prefix + "&aLevel " + x + " : " + LevelConfig.getConfig().getConfigurationSection("level").get(x)));
+        }
+
+    }
 }
+

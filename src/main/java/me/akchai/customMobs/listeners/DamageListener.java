@@ -12,6 +12,8 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.potion.PotionEffectType;
 
+import java.util.List;
+
 public class DamageListener implements Listener {
 
     public double DamageCalculator(LivingEntity targetEntity, Entity attackerEntity, boolean flag){
@@ -63,6 +65,8 @@ public class DamageListener implements Listener {
                 LivingEntity attacker = (LivingEntity) attackerEntity;
                 flag = attackerEntity.getFallDistance() > 0.0F && !attackerEntity.isOnGround() && !attacker.hasPotionEffect(PotionEffectType.BLINDNESS) && attackerEntity.getVehicle() == null;
             }
+
+
 
 
             double damage = DamageCalculator(targetEntity, attackerEntity, flag);

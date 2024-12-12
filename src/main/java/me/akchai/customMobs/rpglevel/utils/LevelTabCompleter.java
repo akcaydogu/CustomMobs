@@ -24,17 +24,17 @@ public class LevelTabCompleter implements TabCompleter {
         }
 
         // Handle second argument: "level" or "xp" for "set" or "add"
-        if (args.length == 2 && (args[0].equals("set") || args[0].equals("add"))) {
+        if (args.length == 2 && (args[0].equals("set") || args[0].equals("add") || args[0].equals("remove"))) {
             return List.of("level", "xp");
         }
 
         // Handle third argument: Set fixed value "10" for "set" or "add"
-        if (args.length == 3 && (args[0].equals("set") || args[0].equals("add"))) {
+        if (args.length == 3 && (args[0].equals("set") || args[0].equals("add") || args[0].equals("remove"))) {
             return List.of("10");
         }
 
         // Handle fourth argument: List of online players for "add"
-        if (args.length == 4 && (args[0].equals("add") || args[0].equals("set"))) {
+        if (args.length == 4 && (args[0].equals("add") || args[0].equals("set") || args[0].equals("remove"))) {
             return playerNames; // Return pre-fetched player names
         }
 
